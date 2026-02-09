@@ -1,6 +1,7 @@
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import Calendar from './components/Calendar';
+import ListView from './components/ListView';
 import TaskModal from './components/TaskModal';
 import { Task, ViewType, RepeatType, RepeatConfig } from './types';
 import { MONTHS } from './constants';
@@ -36,8 +37,10 @@ const App: React.FC = () => {
     const d = new Date(currentDate);
     if (view === 'week') {
       d.setDate(d.getDate() - 7);
-    } else {
+    } else if (view === 'month') {
       d.setMonth(d.getMonth() - 1);
+    } else {
+      d.setDate(d.getDate() - 1);
     }
     setCurrentDate(d);
   };
@@ -46,8 +49,10 @@ const App: React.FC = () => {
     const d = new Date(currentDate);
     if (view === 'week') {
       d.setDate(d.getDate() + 7);
-    } else {
+    } else if (view === 'month') {
       d.setMonth(d.getMonth() + 1);
+    } else {
+      d.setDate(d.getDate() + 1);
     }
     setCurrentDate(d);
   };
@@ -70,9 +75,10 @@ const App: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  const handleDateClick = (date: Date) => {
-    handleCreateTask(date, "09:00");
-  };
+  const tasksForSelectedDate = useMemo(() => {
+    const dateStr = currentDate.toISOString().split('T')[0];
+    return tasks.filter(t => t.date.split('T')[0] === dateStr);
+  }, [tasks, currentDate]);
 
   const generateRecurringTasks = (baseTask: Task, count: number = 12): Task[] => {
     const recurring: Task[] = [];
@@ -80,7 +86,6 @@ const App: React.FC = () => {
     
     for (let i = 1; i <= count; i++) {
       const nextDate = new Date(startDate);
-      
       if (baseTask.repeat === 'daily') {
         nextDate.setDate(startDate.getDate() + i);
       } else if (baseTask.repeat === 'weekly') {
@@ -88,19 +93,11 @@ const App: React.FC = () => {
       } else if (baseTask.repeat === 'monthly') {
         nextDate.setMonth(startDate.getMonth() + i);
       } else if (baseTask.repeat === 'custom' && baseTask.repeatConfig) {
-        const { interval, unit, daysOfWeek } = baseTask.repeatConfig;
-        if (unit === 'day') {
-          nextDate.setDate(startDate.getDate() + (i * interval));
-        } else if (unit === 'week') {
-          // If daysOfWeek specified, we'd need more complex logic to fill gaps.
-          // Simple implementation: repeat the whole pattern
-          nextDate.setDate(startDate.getDate() + (i * interval * 7));
-        } else if (unit === 'month') {
-          nextDate.setMonth(startDate.getMonth() + (i * interval));
-        }
-      } else {
-        break;
-      }
+        const { interval, unit } = baseTask.repeatConfig;
+        if (unit === 'day') nextDate.setDate(startDate.getDate() + (i * interval));
+        else if (unit === 'week') nextDate.setDate(startDate.getDate() + (i * interval * 7));
+        else if (unit === 'month') nextDate.setMonth(startDate.getMonth() + (i * interval));
+      } else break;
 
       recurring.push({
         ...baseTask,
@@ -114,7 +111,6 @@ const App: React.FC = () => {
 
   const handleSaveTask = (taskData: Partial<Task>) => {
     if (editingTask?.id) {
-      // Simple edit - just update the specific instance for now
       setTasks(prev => prev.map(t => t.id === editingTask.id ? { ...t, ...taskData } as Task : t));
     } else {
       const rootId = Math.random().toString(36).substr(2, 9);
@@ -131,12 +127,8 @@ const App: React.FC = () => {
         repeat: taskData.repeat || 'none',
         repeatConfig: taskData.repeatConfig
       };
-
       let allNewTasks = [newTask];
-      if (newTask.repeat !== 'none') {
-        allNewTasks = [...allNewTasks, ...generateRecurringTasks(newTask)];
-      }
-
+      if (newTask.repeat !== 'none') allNewTasks = [...allNewTasks, ...generateRecurringTasks(newTask)];
       setTasks(prev => [...prev, ...allNewTasks]);
     }
     setIsModalOpen(false);
@@ -217,13 +209,19 @@ const App: React.FC = () => {
               <button onClick={handleNext} className="p-2 hover:bg-slate-100 rounded-full transition-colors active:scale-75"><ChevronRight /></button>
             </div>
             <h2 className="text-lg md:text-xl font-bold ml-2 min-w-[180px] text-slate-800">
-              {MONTHS[currentDate.getMonth()]} {currentDate.getFullYear()}
+              {MONTHS[currentDate.getMonth()]} {view === 'list' ? currentDate.getDate() : ''} {currentDate.getFullYear()}
             </h2>
           </div>
         </div>
 
         <div className="flex items-center gap-3">
           <div className="hidden lg:flex border border-slate-200 rounded-xl overflow-hidden bg-slate-50 p-1 mr-2">
+            <button 
+              onClick={() => setView('list')}
+              className={`px-4 py-1.5 text-sm font-bold rounded-lg transition-all ${view === 'list' ? 'bg-white shadow-md text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
+            >
+              Lista
+            </button>
             <button 
               onClick={() => setView('week')}
               className={`px-4 py-1.5 text-sm font-bold rounded-lg transition-all ${view === 'week' ? 'bg-white shadow-md text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
@@ -301,37 +299,28 @@ const App: React.FC = () => {
                   </div>
                 </div>
               ))}
-              {tasks.filter(t => !t.completed && t.priority === 'high').length === 0 && (
-                <div className="text-xs text-slate-400 text-center py-4 bg-slate-100/50 rounded-xl border border-dashed border-slate-200">
-                  Nada urgente por aqui.
-                </div>
-              )}
-            </div>
-          </section>
-
-          <section className="mt-auto px-1">
-            <div className="bg-gradient-to-br from-indigo-50 to-blue-50 p-5 rounded-2xl border border-indigo-100 shadow-sm relative overflow-hidden group">
-              <div className="absolute -right-4 -top-4 w-12 h-12 bg-white/40 blur-2xl group-hover:scale-150 transition-transform duration-1000" />
-              <h4 className="text-indigo-800 text-xs font-black mb-2 flex items-center gap-2">
-                <Sparkles /> IA OPTIMIZER
-              </h4>
-              <p className="text-indigo-600 text-[11px] leading-relaxed font-medium">
-                Sua agenda está muito cheia? Deixe a Gemini analisar suas prioridades e sugerir o melhor horário para cada tarefa.
-              </p>
             </div>
           </section>
         </aside>
 
-        <section className="flex-1 bg-white relative">
-          <Calendar 
-            currentDate={currentDate} 
-            view={view}
-            tasks={tasks}
-            onToggleTask={handleToggleTask}
-            onEditTask={handleEditTask}
-            onCreateTask={handleCreateTask}
-            onDateClick={handleDateClick}
-          />
+        <section className="flex-1 bg-white relative flex flex-col">
+          {view === 'list' ? (
+            <ListView 
+              tasks={tasksForSelectedDate} 
+              onToggleTask={handleToggleTask} 
+              onEditTask={handleEditTask} 
+            />
+          ) : (
+            <Calendar 
+              currentDate={currentDate} 
+              view={view}
+              tasks={tasks}
+              onToggleTask={handleToggleTask}
+              onEditTask={handleEditTask}
+              onCreateTask={handleCreateTask}
+              onDateClick={(d) => { setCurrentDate(d); setView('list'); }}
+            />
+          )}
         </section>
       </main>
 

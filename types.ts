@@ -23,7 +23,7 @@ export interface Task {
   parentId?: string; // To link recurring instances
 }
 
-export type ViewType = 'day' | 'week' | 'month';
+export type ViewType = 'day' | 'week' | 'month' | 'list';
 
 export interface CalendarState {
   currentDate: Date;

@@ -11,6 +11,7 @@
         body {
             font-family: 'Inter', sans-serif;
             overflow: hidden;
+            background-color: #ffffff;
         }
         .custom-scrollbar::-webkit-scrollbar {
             width: 8px;
@@ -39,5 +40,7 @@
 </head>
 <body class="bg-white text-slate-900">
     <div id="root"></div>
+    <!-- No cPanel, certifique-se de que o arquivo index.tsx está sendo processado por um loader ou renomeado para index.js se transpilado -->
+    <script type="module" src="./index.tsx"></script>
 </body>
 </html>
