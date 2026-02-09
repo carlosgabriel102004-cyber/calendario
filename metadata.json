@@ -1,0 +1,5 @@
+{
+  "name": "TaskFlow - Calendário de Tarefas Inteligente",
+  "description": "Um clone do Google Agenda focado em produtividade e gestão de tarefas, com inteligência artificial para organizar seu dia automaticamente.",
+  "requestFramePermissions": []
+}
