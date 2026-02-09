@@ -11,7 +11,7 @@ interface TaskModalProps {
   onDelete?: (id: string) => void;
   initialData?: Partial<Task>;
   availableTags: TagDef[];
-  onQuickAddTag?: (name: string, color: string) => void; // Nova prop para adicionar tag rápido
+  onQuickAddTag?: (name: string, color: string) => void;
 }
 
 const TaskModal: React.FC<TaskModalProps> = ({ 
@@ -33,7 +33,6 @@ const TaskModal: React.FC<TaskModalProps> = ({
   const [repeat, setRepeat] = useState<RepeatType>('none');
   const [customRepeat, setCustomRepeat] = useState<RepeatConfig>({ interval: 1, unit: 'day', daysOfWeek: [] });
   
-  // Estados para criação rápida de tag
   const [isAddingTag, setIsAddingTag] = useState(false);
   const [quickTagName, setQuickTagName] = useState('');
 
@@ -65,6 +64,15 @@ const TaskModal: React.FC<TaskModalProps> = ({
       setQuickTagName('');
       setIsAddingTag(false);
     }
+  };
+
+  const toggleDay = (dayIndex: number) => {
+    setCustomRepeat(prev => ({
+      ...prev,
+      daysOfWeek: prev.daysOfWeek?.includes(dayIndex)
+        ? prev.daysOfWeek!.filter(d => d !== dayIndex)
+        : [...(prev.daysOfWeek || []), dayIndex]
+    }));
   };
 
   if (!isOpen) return null;
@@ -165,6 +173,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
                   <option value="daily">Todo dia</option>
                   <option value="weekly">Toda semana</option>
                   <option value="monthly">Todo mês</option>
+                  <option value="custom">Personalizado...</option>
                 </select>
               </div>
               <div>
@@ -176,6 +185,48 @@ const TaskModal: React.FC<TaskModalProps> = ({
                 </select>
               </div>
             </div>
+
+            {/* Painel de Repetição Personalizada */}
+            {repeat === 'custom' && (
+              <div className="p-5 bg-slate-50 border border-slate-200 rounded-2xl space-y-4 animate-in slide-in-from-top-2 duration-300">
+                <div className="flex items-center gap-3">
+                  <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Repetir a cada</span>
+                  <input 
+                    type="number" 
+                    min="1"
+                    className="w-16 px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-center font-black text-slate-800 outline-none focus:border-blue-500 transition-all"
+                    value={customRepeat.interval}
+                    onChange={(e) => setCustomRepeat(prev => ({ ...prev, interval: parseInt(e.target.value) || 1 }))}
+                  />
+                  <select 
+                    className="bg-transparent font-black text-slate-800 outline-none cursor-pointer p-1"
+                    value={customRepeat.unit}
+                    onChange={(e) => setCustomRepeat(prev => ({ ...prev, unit: e.target.value as any }))}
+                  >
+                    <option value="day">Dias</option>
+                    <option value="week">Semanas</option>
+                    <option value="month">Meses</option>
+                  </select>
+                </div>
+                
+                {customRepeat.unit === 'week' && (
+                  <div className="pt-4 border-t border-slate-200">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 block">Nos dias:</span>
+                    <div className="flex gap-1 justify-between">
+                      {WEEK_DAYS.map((day, i) => (
+                        <button
+                          key={day}
+                          onClick={() => toggleDay(i)}
+                          className={`w-9 h-9 rounded-full text-[10px] font-black transition-all ${customRepeat.daysOfWeek?.includes(i) ? 'bg-blue-600 text-white shadow-lg scale-110' : 'bg-white text-slate-400 border border-slate-200 hover:bg-slate-100'}`}
+                        >
+                          {day[0]}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             <div>
               <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Descrição / Notas</label>

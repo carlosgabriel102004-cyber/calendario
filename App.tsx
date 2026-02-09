@@ -131,6 +131,13 @@ const App: React.FC = () => {
       if (baseTask.repeat === 'daily') nextDate.setDate(startDate.getDate() + i);
       else if (baseTask.repeat === 'weekly') nextDate.setDate(startDate.getDate() + (i * 7));
       else if (baseTask.repeat === 'monthly') nextDate.setMonth(startDate.getMonth() + i);
+      else if (baseTask.repeat === 'custom' && baseTask.repeatConfig) {
+        const { interval, unit } = baseTask.repeatConfig;
+        if (unit === 'day') nextDate.setDate(startDate.getDate() + (i * interval));
+        else if (unit === 'week') nextDate.setDate(startDate.getDate() + (i * interval * 7));
+        else if (unit === 'month') nextDate.setMonth(startDate.getMonth() + (i * interval));
+      } else break;
+
       recurring.push({ ...baseTask, id: `${baseTask.id}-rec-${i}`, date: nextDate.toISOString(), parentId: baseTask.id });
     }
     return recurring;
@@ -150,7 +157,8 @@ const App: React.FC = () => {
         completed: false,
         priority: taskData.priority || 'medium',
         tags: taskData.tags || [],
-        repeat: taskData.repeat || 'none'
+        repeat: taskData.repeat || 'none',
+        repeatConfig: taskData.repeatConfig
       };
       let allNewTasks = [newTask];
       if (newTask.repeat !== 'none') allNewTasks = [...allNewTasks, ...generateRecurringTasks(newTask)];
