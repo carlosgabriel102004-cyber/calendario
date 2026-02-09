@@ -1,7 +1,7 @@
 
 import React, { useMemo } from 'react';
-import { Task, ViewType } from '../types';
-import { WEEK_DAYS, PRIORITY_INDICATORS } from '../constants';
+import { Task, ViewType, TagDef } from '../types';
+import { WEEK_DAYS } from '../constants';
 import TaskCard from './TaskCard';
 
 interface CalendarProps {
@@ -12,6 +12,7 @@ interface CalendarProps {
   onEditTask: (task: Task) => void;
   onCreateTask: (date: Date, time: string) => void;
   onDateClick: (date: Date) => void;
+  availableTags: TagDef[];
 }
 
 const Calendar: React.FC<CalendarProps> = ({ 
@@ -21,7 +22,8 @@ const Calendar: React.FC<CalendarProps> = ({
   onToggleTask, 
   onEditTask, 
   onCreateTask,
-  onDateClick
+  onDateClick,
+  availableTags
 }) => {
   const isToday = (date: Date) => {
     const today = new Date();
@@ -170,6 +172,7 @@ const Calendar: React.FC<CalendarProps> = ({
                   task={task} 
                   onToggle={onToggleTask} 
                   onClick={onEditTask} 
+                  availableTags={availableTags}
                 />
               ))}
             </div>

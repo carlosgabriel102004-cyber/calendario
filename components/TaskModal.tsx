@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
-import { Task, Priority, RepeatType, RepeatConfig } from '../types';
-import { Tag, Repeat as RepeatIcon } from './Icons';
+import { Task, Priority, RepeatType, RepeatConfig, TagDef } from '../types';
+import { Tag, Repeat as RepeatIcon, Plus } from './Icons';
 import { WEEK_DAYS } from '../constants';
 
 interface TaskModalProps {
@@ -10,10 +10,19 @@ interface TaskModalProps {
   onSave: (task: Partial<Task>) => void;
   onDelete?: (id: string) => void;
   initialData?: Partial<Task>;
-  availableTags: string[];
+  availableTags: TagDef[];
+  onQuickAddTag?: (name: string, color: string) => void; // Nova prop para adicionar tag rápido
 }
 
-const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, onDelete, initialData, availableTags }) => {
+const TaskModal: React.FC<TaskModalProps> = ({ 
+  isOpen, 
+  onClose, 
+  onSave, 
+  onDelete, 
+  initialData, 
+  availableTags,
+  onQuickAddTag 
+}) => {
   const [title, setTitle] = useState('');
   const [date, setDate] = useState('');
   const [startTime, setStartTime] = useState('09:00');
@@ -23,6 +32,10 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, onDelete
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [repeat, setRepeat] = useState<RepeatType>('none');
   const [customRepeat, setCustomRepeat] = useState<RepeatConfig>({ interval: 1, unit: 'day', daysOfWeek: [] });
+  
+  // Estados para criação rápida de tag
+  const [isAddingTag, setIsAddingTag] = useState(false);
+  const [quickTagName, setQuickTagName] = useState('');
 
   useEffect(() => {
     if (initialData) {
@@ -35,32 +48,23 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, onDelete
       setSelectedTags(initialData.tags || []);
       setRepeat(initialData.repeat || 'none');
       setCustomRepeat(initialData.repeatConfig || { interval: 1, unit: 'day', daysOfWeek: [] });
-    } else {
-      setTitle('');
-      setDate(new Date().toISOString().split('T')[0]);
-      setStartTime('09:00');
-      setDuration(30);
-      setPriority('medium');
-      setDescription('');
-      setSelectedTags([]);
-      setRepeat('none');
-      setCustomRepeat({ interval: 1, unit: 'day', daysOfWeek: [] });
     }
   }, [initialData, isOpen]);
 
-  const toggleTag = (tag: string) => {
+  const toggleTag = (tagName: string) => {
     setSelectedTags(prev => 
-      prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
+      prev.includes(tagName) ? prev.filter(t => t !== tagName) : [...prev, tagName]
     );
   };
 
-  const toggleDay = (dayIndex: number) => {
-    setCustomRepeat(prev => ({
-      ...prev,
-      daysOfWeek: prev.daysOfWeek?.includes(dayIndex)
-        ? prev.daysOfWeek.filter(d => d !== dayIndex)
-        : [...(prev.daysOfWeek || []), dayIndex]
-    }));
+  const handleQuickAddTag = () => {
+    if (quickTagName.trim() && onQuickAddTag) {
+      const randomColor = '#' + Math.floor(Math.random()*16777215).toString(16);
+      onQuickAddTag(quickTagName.trim(), randomColor);
+      setSelectedTags(prev => [...prev, quickTagName.trim()]);
+      setQuickTagName('');
+      setIsAddingTag(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -69,144 +73,115 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, onDelete
 
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-md">
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200">
+      <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200">
         <div className="p-8 max-h-[85vh] overflow-y-auto custom-scrollbar">
-          <h2 className="text-2xl font-bold mb-6 text-slate-800 flex items-center gap-3">
-            <div className="w-2 h-8 bg-blue-600 rounded-full" />
-            {initialData?.id ? 'Editar Tarefa' : 'Nova Tarefa'}
-          </h2>
+          <div className="flex items-center justify-between mb-8">
+            <h2 className="text-2xl font-black text-slate-800 flex items-center gap-3">
+              <span className="w-2 h-8 bg-blue-600 rounded-full" />
+              {initialData?.id ? 'Editar Nota' : 'Nova Tarefa'}
+            </h2>
+            <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full text-slate-400">×</button>
+          </div>
           
           <div className="space-y-6">
+            <input
+              type="text"
+              autoFocus
+              className="w-full text-3xl font-black placeholder:text-slate-200 text-slate-800 outline-none bg-transparent mb-4"
+              placeholder="O que vamos fazer?"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+            />
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Data</label>
+                <input type="date" className={inputClass} value={date} onChange={(e) => setDate(e.target.value)} />
+              </div>
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Horário</label>
+                <input type="time" className={inputClass} value={startTime} onChange={(e) => setStartTime(e.target.value)} />
+              </div>
+            </div>
+
             <div>
-              <label className="block text-sm font-bold text-slate-700 mb-2">Título da Tarefa</label>
-              <input
-                type="text"
-                autoFocus
-                className={inputClass}
-                placeholder="Ex: Reunião de Planejamento"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">Data de Início</label>
-                <input
-                  type="date"
-                  className={inputClass}
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">Horário</label>
-                <input
-                  type="time"
-                  className={inputClass}
-                  value={startTime}
-                  onChange={(e) => setStartTime(e.target.value)}
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">Repetição</label>
-                <div className="relative">
-                  <select
-                    className={`${inputClass} appearance-none pr-10`}
-                    value={repeat}
-                    onChange={(e) => setRepeat(e.target.value as RepeatType)}
-                  >
-                    <option value="none">Não repetir</option>
-                    <option value="daily">Diariamente</option>
-                    <option value="weekly">Semanalmente</option>
-                    <option value="monthly">Mensalmente</option>
-                    <option value="custom">Personalizado...</option>
-                  </select>
-                  <div className="absolute right-3 top-3 pointer-events-none text-slate-500">
-                    <RepeatIcon />
-                  </div>
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">Prioridade</label>
-                <select
-                  className={inputClass}
-                  value={priority}
-                  onChange={(e) => setPriority(e.target.value as Priority)}
+              <div className="flex items-center justify-between mb-3 px-1">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                  <Tag /> Etiquetas
+                </label>
+                <button 
+                  onClick={() => setIsAddingTag(!isAddingTag)}
+                  className="text-[10px] font-black text-blue-600 hover:text-blue-800 uppercase flex items-center gap-1 transition-colors"
                 >
-                  <option value="low">Baixa</option>
-                  <option value="medium">Média</option>
-                  <option value="high">Alta</option>
+                  <Plus /> Criar Nova
+                </button>
+              </div>
+
+              {isAddingTag && (
+                <div className="flex gap-2 mb-4 animate-in slide-in-from-top-1 duration-200">
+                  <input 
+                    type="text"
+                    placeholder="Nome da etiqueta..."
+                    className="flex-1 px-3 py-1.5 bg-blue-50 border border-blue-100 rounded-xl text-xs font-bold text-blue-900 outline-none"
+                    value={quickTagName}
+                    onChange={(e) => setQuickTagName(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleQuickAddTag()}
+                  />
+                  <button 
+                    onClick={handleQuickAddTag}
+                    className="px-4 py-1.5 bg-blue-600 text-white rounded-xl text-xs font-bold"
+                  >
+                    Add
+                  </button>
+                </div>
+              )}
+
+              <div className="flex flex-wrap gap-2 min-h-[40px] p-1">
+                {availableTags.map(tag => {
+                  const isSelected = selectedTags.includes(tag.name);
+                  return (
+                    <button
+                      key={tag.id}
+                      onClick={() => toggleTag(tag.name)}
+                      style={{
+                        backgroundColor: isSelected ? tag.color : 'transparent',
+                        color: isSelected ? '#ffffff' : tag.color,
+                        borderColor: isSelected ? tag.color : `${tag.color}44`
+                      }}
+                      className={`px-4 py-2 rounded-2xl text-[11px] font-black transition-all border-2 ${isSelected ? 'shadow-lg scale-105' : 'hover:bg-slate-50'}`}
+                    >
+                      {tag.name}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Repetição</label>
+                <select className={inputClass} value={repeat} onChange={(e) => setRepeat(e.target.value as RepeatType)}>
+                  <option value="none">Não repetir</option>
+                  <option value="daily">Todo dia</option>
+                  <option value="weekly">Toda semana</option>
+                  <option value="monthly">Todo mês</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Prioridade</label>
+                <select className={inputClass} value={priority} onChange={(e) => setPriority(e.target.value as Priority)}>
+                  <option value="low">Baixa 🟢</option>
+                  <option value="medium">Média 🟡</option>
+                  <option value="high">Alta 🔴</option>
                 </select>
               </div>
             </div>
 
-            {repeat === 'custom' && (
-              <div className="p-4 bg-blue-50 border border-blue-100 rounded-2xl space-y-4 animate-in slide-in-from-top-2 duration-300">
-                <div className="flex items-center gap-3">
-                  <span className="text-sm font-bold text-blue-900 whitespace-nowrap">Repetir a cada</span>
-                  <input 
-                    type="number" 
-                    min="1"
-                    className="w-16 px-2 py-1 bg-white border border-blue-200 rounded-lg text-center font-bold text-blue-900"
-                    value={customRepeat.interval}
-                    onChange={(e) => setCustomRepeat(prev => ({ ...prev, interval: parseInt(e.target.value) || 1 }))}
-                  />
-                  <select 
-                    className="bg-transparent font-bold text-blue-900 outline-none cursor-pointer"
-                    value={customRepeat.unit}
-                    onChange={(e) => setCustomRepeat(prev => ({ ...prev, unit: e.target.value as any }))}
-                  >
-                    <option value="day">Dias</option>
-                    <option value="week">Semanas</option>
-                    <option value="month">Meses</option>
-                  </select>
-                </div>
-                
-                {customRepeat.unit === 'week' && (
-                  <div>
-                    <span className="text-xs font-bold text-blue-800 uppercase mb-2 block">Nos dias:</span>
-                    <div className="flex gap-1 justify-between">
-                      {WEEK_DAYS.map((day, i) => (
-                        <button
-                          key={day}
-                          onClick={() => toggleDay(i)}
-                          className={`w-8 h-8 rounded-full text-[10px] font-bold transition-all ${customRepeat.daysOfWeek?.includes(i) ? 'bg-blue-600 text-white' : 'bg-white text-blue-400 hover:bg-blue-100'}`}
-                        >
-                          {day[0]}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
             <div>
-              <label className="block text-sm font-bold text-slate-700 mb-2 flex items-center gap-2">
-                <Tag /> Tags de Organização
-              </label>
-              <div className="flex flex-wrap gap-2">
-                {availableTags.map(tag => (
-                  <button
-                    key={tag}
-                    onClick={() => toggleTag(tag)}
-                    className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all ${selectedTags.includes(tag) ? 'bg-blue-600 text-white shadow-md' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
-                  >
-                    {tag}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-bold text-slate-700 mb-2">Notas e Detalhes</label>
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Descrição / Notas</label>
               <textarea
-                className={`${inputClass} min-h-[100px] resize-none`}
-                placeholder="Adicione observações importantes aqui..."
+                className={`${inputClass} min-h-[120px] resize-none note-font text-lg`}
+                placeholder="Escreva seus pensamentos ou detalhes aqui..."
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
               />
@@ -216,27 +191,17 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, onDelete
 
         <div className="bg-slate-50 p-6 flex justify-between items-center border-t border-slate-100">
           {initialData?.id ? (
-            <button
-              onClick={() => onDelete?.(initialData.id!)}
-              className="px-6 py-2.5 text-rose-600 font-bold hover:bg-rose-50 rounded-2xl transition-colors"
-            >
-              Excluir
-            </button>
+            <button onClick={() => onDelete?.(initialData.id!)} className="px-6 py-3 text-rose-500 font-black text-xs uppercase hover:bg-rose-50 rounded-2xl transition-colors">Excluir</button>
           ) : <div />}
           
           <div className="flex gap-3">
-            <button
-              onClick={onClose}
-              className="px-6 py-2.5 text-slate-600 font-bold hover:bg-slate-200 rounded-2xl transition-colors"
-            >
-              Cancelar
-            </button>
+            <button onClick={onClose} className="px-6 py-3 text-slate-400 font-black text-xs uppercase hover:bg-slate-200 rounded-2xl transition-colors">Cancelar</button>
             <button
               onClick={() => onSave({ title, date, startTime, duration, priority, description, tags: selectedTags, repeat, repeatConfig: customRepeat })}
               disabled={!title || !date}
-              className="px-10 py-2.5 bg-blue-600 text-white font-bold rounded-2xl hover:bg-blue-700 shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:shadow-none active:scale-95"
+              className="px-10 py-3 bg-slate-900 text-white font-black text-xs uppercase rounded-2xl hover:bg-blue-600 shadow-xl transition-all disabled:opacity-30 active:scale-95"
             >
-              Salvar Tarefa
+              Salvar Nota
             </button>
           </div>
         </div>

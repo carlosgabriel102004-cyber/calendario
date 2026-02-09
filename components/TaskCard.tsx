@@ -1,16 +1,17 @@
 
 import React from 'react';
-import { Task } from '../types';
+import { Task, TagDef } from '../types';
 import { PRIORITY_COLORS } from '../constants';
-import { Check, Tag } from './Icons';
+import { Check } from './Icons';
 
 interface TaskCardProps {
   task: Task;
   onToggle: (id: string) => void;
   onClick: (task: Task) => void;
+  availableTags: TagDef[];
 }
 
-const TaskCard: React.FC<TaskCardProps> = ({ task, onToggle, onClick }) => {
+const TaskCard: React.FC<TaskCardProps> = ({ task, onToggle, onClick, availableTags }) => {
   const [hours, minutes] = task.startTime.split(':').map(Number);
   const top = (hours * 60 + minutes);
   const height = task.duration;
@@ -36,10 +37,20 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onToggle, onClick }) => {
           <div className="flex items-center gap-1 mt-0.5">
             {height > 35 && <span className="text-[10px] opacity-75">{task.startTime}</span>}
             {task.tags && task.tags.length > 0 && height > 50 && (
-              <div className="flex gap-1 overflow-hidden">
-                {task.tags.map(tag => (
-                  <span key={tag} className="text-[8px] bg-black/5 px-1 rounded truncate max-w-[40px]">{tag}</span>
-                ))}
+              <div className="flex gap-1 overflow-hidden mt-1">
+                {task.tags.map(tagName => {
+                  const tagDef = availableTags.find(t => t.name === tagName);
+                  const color = tagDef ? tagDef.color : '#3b82f6';
+                  return (
+                    <span 
+                      key={tagName} 
+                      style={{ backgroundColor: `${color}33`, color: color }}
+                      className="text-[9px] font-bold px-1.5 py-[1px] rounded truncate max-w-[50px] mix-blend-multiply"
+                    >
+                      {tagName}
+                    </span>
+                  );
+                })}
               </div>
             )}
           </div>

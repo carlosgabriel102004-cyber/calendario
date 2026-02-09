@@ -30,14 +30,56 @@
         .note-font {
             font-family: 'Kalam', cursive;
         }
+        /* Efeito de linhas de caderno para a visualização de lista */
+        .notebook-lines {
+            background-image: linear-gradient(#e5e7eb 1px, transparent 1px);
+            background-size: 100% 2.5rem;
+        }
     </style>
 <script>
-    // Correção para o erro 'process is not defined' no cPanel/Navegador
-    window.process = {
-        env: {
-            API_KEY: "" // O valor real será injetado pelo ambiente se disponível
-        }
+    // 1. Polyfill para evitar "process is not defined" (causa comum de tela branca)
+    window.process = { 
+        env: { API_KEY: "" },
+        nextTick: function(fn) { setTimeout(fn, 0); }
     };
+
+    // 2. Script para Favicon Dinâmico (Calendário com o dia de hoje)
+    (function() {
+        try {
+            const day = new Date().getDate();
+            const canvas = document.createElement('canvas');
+            canvas.width = 64;
+            canvas.height = 64;
+            const ctx = canvas.getContext('2d');
+
+            // Fundo Branco Arredondado
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.roundRect(0, 0, 64, 64, 12);
+            ctx.fill();
+
+            // Cabeçalho Vermelho (Estilo Agenda)
+            ctx.fillStyle = '#ef4444';
+            ctx.beginPath();
+            ctx.roundRect(0, 0, 64, 20, [12, 12, 0, 0]);
+            ctx.fill();
+
+            // Texto do Dia
+            ctx.fillStyle = '#1e293b';
+            ctx.font = 'bold 36px Inter, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(day.toString(), 32, 42);
+
+            const link = document.createElement('link');
+            link.rel = 'icon';
+            link.type = 'image/png';
+            link.href = canvas.toDataURL('image/png');
+            document.getElementsByTagName('head')[0].appendChild(link);
+        } catch (e) {
+            console.error("Erro ao gerar favicon dinâmico", e);
+        }
+    })();
 </script>
 <script type="importmap">
 {
@@ -54,6 +96,7 @@
 </head>
 <body class="bg-white text-slate-900">
     <div id="root"></div>
+    <!-- No cPanel, se o navegador não processar .tsx diretamente, este arquivo precisará ser transpilado para .js -->
     <script type="module" src="./index.tsx"></script>
 </body>
 </html>

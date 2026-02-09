@@ -8,6 +8,12 @@ export interface RepeatConfig {
   daysOfWeek?: number[]; // 0-6
 }
 
+export interface TagDef {
+  id: string;
+  name: string;
+  color: string;
+}
+
 export interface Task {
   id: string;
   title: string;
@@ -17,7 +23,7 @@ export interface Task {
   duration: number; // minutes
   completed: boolean;
   priority: Priority;
-  tags: string[];
+  tags: string[]; // references TagDef.name
   repeat: RepeatType;
   repeatConfig?: RepeatConfig;
   parentId?: string; // To link recurring instances
