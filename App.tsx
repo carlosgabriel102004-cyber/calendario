@@ -123,22 +123,66 @@ const App: React.FC = () => {
     return tasks.filter(t => t.date.split('T')[0] === dateStr);
   }, [tasks, currentDate]);
 
-  const generateRecurringTasks = (baseTask: Task, count: number = 12): Task[] => {
+  const generateRecurringTasks = (baseTask: Task): Task[] => {
     const recurring: Task[] = [];
     const startDate = new Date(baseTask.date);
-    for (let i = 1; i <= count; i++) {
-      const nextDate = new Date(startDate);
-      if (baseTask.repeat === 'daily') nextDate.setDate(startDate.getDate() + i);
-      else if (baseTask.repeat === 'weekly') nextDate.setDate(startDate.getDate() + (i * 7));
-      else if (baseTask.repeat === 'monthly') nextDate.setMonth(startDate.getMonth() + i);
-      else if (baseTask.repeat === 'custom' && baseTask.repeatConfig) {
-        const { interval, unit } = baseTask.repeatConfig;
-        if (unit === 'day') nextDate.setDate(startDate.getDate() + (i * interval));
-        else if (unit === 'week') nextDate.setDate(startDate.getDate() + (i * interval * 7));
-        else if (unit === 'month') nextDate.setMonth(startDate.getMonth() + (i * interval));
+    
+    // Configura a data final ou usa um limite de segurança de 6 meses
+    const endDate = baseTask.repeatEndDate ? new Date(baseTask.repeatEndDate) : new Date(startDate);
+    if (!baseTask.repeatEndDate) endDate.setMonth(endDate.getMonth() + 6);
+
+    const interval = baseTask.repeatConfig?.interval || 1;
+    const unit = baseTask.repeatConfig?.unit || 'day';
+    const daysOfWeek = baseTask.repeatConfig?.daysOfWeek || [];
+
+    // Lógica especial ultra-precisa para Semanas Personalizadas com múltiplos dias
+    if (baseTask.repeat === 'custom' && unit === 'week' && daysOfWeek.length > 0) {
+      let iterDate = new Date(startDate);
+      iterDate.setDate(iterDate.getDate() + 1); // Pula o dia base que já foi gerado
+      let count = 1;
+      
+      while (iterDate <= endDate && count <= 365) { // Proteção extrema de limite de 365 cópias
+        const firstDayStart = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate() - startDate.getDay());
+        const iterDayStart = new Date(iterDate.getFullYear(), iterDate.getMonth(), iterDate.getDate() - iterDate.getDay());
+        const weeksDiff = Math.floor((iterDayStart.getTime() - firstDayStart.getTime()) / (7 * 24 * 60 * 60 * 1000));
+
+        if (weeksDiff % interval === 0 && daysOfWeek.includes(iterDate.getDay())) {
+          recurring.push({
+            ...baseTask,
+            id: `${baseTask.id}-rec-${count}`,
+            date: iterDate.toISOString(),
+            parentId: baseTask.id
+          });
+          count++;
+        }
+        iterDate.setDate(iterDate.getDate() + 1);
+      }
+      return recurring;
+    }
+
+    // Lógica de pulo rápido para repetições padrão (Todo dia, Toda semana...)
+    let current = new Date(startDate);
+    let count = 1;
+    
+    while (true) {
+      if (baseTask.repeat === 'daily') current.setDate(current.getDate() + 1);
+      else if (baseTask.repeat === 'weekly') current.setDate(current.getDate() + 7);
+      else if (baseTask.repeat === 'monthly') current.setMonth(current.getMonth() + 1);
+      else if (baseTask.repeat === 'custom') {
+        if (unit === 'day') current.setDate(current.getDate() + interval);
+        else if (unit === 'week') current.setDate(current.getDate() + (interval * 7)); // Semanas inteiras
+        else if (unit === 'month') current.setMonth(current.getMonth() + interval);
       } else break;
 
-      recurring.push({ ...baseTask, id: `${baseTask.id}-rec-${i}`, date: nextDate.toISOString(), parentId: baseTask.id });
+      if (current > endDate || count > 365) break;
+
+      recurring.push({
+        ...baseTask,
+        id: `${baseTask.id}-rec-${count}`,
+        date: current.toISOString(),
+        parentId: baseTask.id
+      });
+      count++;
     }
     return recurring;
   };
@@ -158,7 +202,8 @@ const App: React.FC = () => {
         priority: taskData.priority || 'medium',
         tags: taskData.tags || [],
         repeat: taskData.repeat || 'none',
-        repeatConfig: taskData.repeatConfig
+        repeatConfig: taskData.repeatConfig,
+        repeatEndDate: taskData.repeatEndDate
       };
       let allNewTasks = [newTask];
       if (newTask.repeat !== 'none') allNewTasks = [...allNewTasks, ...generateRecurringTasks(newTask)];
@@ -169,7 +214,17 @@ const App: React.FC = () => {
   };
 
   const handleDeleteTask = (id: string) => {
-    setTasks(prev => prev.filter(t => t.id !== id && t.parentId !== id));
+    const taskToDelete = tasks.find(t => t.id === id);
+    if (taskToDelete?.parentId || tasks.some(t => t.parentId === id)) {
+      if (confirm('Deseja excluir TODAS as ocorrências futuras dessa tarefa?')) {
+        const rootId = taskToDelete?.parentId || id;
+        setTasks(prev => prev.filter(t => t.id !== rootId && t.parentId !== rootId));
+      } else {
+        setTasks(prev => prev.filter(t => t.id !== id));
+      }
+    } else {
+      setTasks(prev => prev.filter(t => t.id !== id));
+    }
     setIsModalOpen(false);
     setEditingTask(undefined);
   };

@@ -31,6 +31,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
   const [description, setDescription] = useState('');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [repeat, setRepeat] = useState<RepeatType>('none');
+  const [repeatEndDate, setRepeatEndDate] = useState('');
   const [customRepeat, setCustomRepeat] = useState<RepeatConfig>({ interval: 1, unit: 'day', daysOfWeek: [] });
   
   const [isAddingTag, setIsAddingTag] = useState(false);
@@ -46,6 +47,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
       setDescription(initialData.description || '');
       setSelectedTags(initialData.tags || []);
       setRepeat(initialData.repeat || 'none');
+      setRepeatEndDate(initialData.repeatEndDate || '');
       setCustomRepeat(initialData.repeatConfig || { interval: 1, unit: 'day', daysOfWeek: [] });
     }
   }, [initialData, isOpen]);
@@ -95,7 +97,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
             <input
               type="text"
               autoFocus
-              className="w-full text-3xl font-black placeholder:text-slate-200 text-slate-800 outline-none bg-transparent mb-4"
+              className="w-full text-3xl font-black placeholder:text-slate-200 text-slate-800 outline-none bg-transparent mb-4 break-words"
               placeholder="O que vamos fazer?"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -186,45 +188,62 @@ const TaskModal: React.FC<TaskModalProps> = ({
               </div>
             </div>
 
-            {/* Painel de Repetição Personalizada */}
-            {repeat === 'custom' && (
-              <div className="p-5 bg-slate-50 border border-slate-200 rounded-2xl space-y-4 animate-in slide-in-from-top-2 duration-300">
-                <div className="flex items-center gap-3">
-                  <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Repetir a cada</span>
-                  <input 
-                    type="number" 
-                    min="1"
-                    className="w-16 px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-center font-black text-slate-800 outline-none focus:border-blue-500 transition-all"
-                    value={customRepeat.interval}
-                    onChange={(e) => setCustomRepeat(prev => ({ ...prev, interval: parseInt(e.target.value) || 1 }))}
-                  />
-                  <select 
-                    className="bg-transparent font-black text-slate-800 outline-none cursor-pointer p-1"
-                    value={customRepeat.unit}
-                    onChange={(e) => setCustomRepeat(prev => ({ ...prev, unit: e.target.value as any }))}
-                  >
-                    <option value="day">Dias</option>
-                    <option value="week">Semanas</option>
-                    <option value="month">Meses</option>
-                  </select>
-                </div>
-                
-                {customRepeat.unit === 'week' && (
-                  <div className="pt-4 border-t border-slate-200">
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 block">Nos dias:</span>
-                    <div className="flex gap-1 justify-between">
-                      {WEEK_DAYS.map((day, i) => (
-                        <button
-                          key={day}
-                          onClick={() => toggleDay(i)}
-                          className={`w-9 h-9 rounded-full text-[10px] font-black transition-all ${customRepeat.daysOfWeek?.includes(i) ? 'bg-blue-600 text-white shadow-lg scale-110' : 'bg-white text-slate-400 border border-slate-200 hover:bg-slate-100'}`}
-                        >
-                          {day[0]}
-                        </button>
-                      ))}
+            {/* Configuração extra se houver repetição */}
+            {repeat !== 'none' && (
+              <div className="space-y-4 pt-2">
+                {/* Painel de Repetição Personalizada */}
+                {repeat === 'custom' && (
+                  <div className="p-5 bg-slate-50 border border-slate-200 rounded-2xl space-y-4 animate-in slide-in-from-top-2 duration-300">
+                    <div className="flex items-center gap-3">
+                      <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Repetir a cada</span>
+                      <input 
+                        type="number" 
+                        min="1"
+                        className="w-16 px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-center font-black text-slate-800 outline-none focus:border-blue-500 transition-all"
+                        value={customRepeat.interval}
+                        onChange={(e) => setCustomRepeat(prev => ({ ...prev, interval: parseInt(e.target.value) || 1 }))}
+                      />
+                      <select 
+                        className="bg-transparent font-black text-slate-800 outline-none cursor-pointer p-1"
+                        value={customRepeat.unit}
+                        onChange={(e) => setCustomRepeat(prev => ({ ...prev, unit: e.target.value as any }))}
+                      >
+                        <option value="day">Dias</option>
+                        <option value="week">Semanas</option>
+                        <option value="month">Meses</option>
+                      </select>
                     </div>
+                    
+                    {customRepeat.unit === 'week' && (
+                      <div className="pt-4 border-t border-slate-200">
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 block">Nos dias:</span>
+                        <div className="flex gap-1 justify-between">
+                          {WEEK_DAYS.map((day, i) => (
+                            <button
+                              key={day}
+                              onClick={() => toggleDay(i)}
+                              className={`w-9 h-9 rounded-full text-[10px] font-black transition-all ${customRepeat.daysOfWeek?.includes(i) ? 'bg-blue-600 text-white shadow-lg scale-110' : 'bg-white text-slate-400 border border-slate-200 hover:bg-slate-100'}`}
+                            >
+                              {day[0]}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
+                
+                {/* Repetir Até */}
+                <div className="animate-in slide-in-from-top-1 duration-200">
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Repetir Até (Limite)</label>
+                  <input 
+                    type="date" 
+                    className={inputClass} 
+                    value={repeatEndDate} 
+                    onChange={(e) => setRepeatEndDate(e.target.value)} 
+                  />
+                  <p className="text-[10px] text-slate-400 mt-1 ml-1 font-medium">Deixe vazio para repetir pelos próximos 6 meses padrão.</p>
+                </div>
               </div>
             )}
 
@@ -248,7 +267,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
           <div className="flex gap-3">
             <button onClick={onClose} className="px-6 py-3 text-slate-400 font-black text-xs uppercase hover:bg-slate-200 rounded-2xl transition-colors">Cancelar</button>
             <button
-              onClick={() => onSave({ title, date, startTime, duration, priority, description, tags: selectedTags, repeat, repeatConfig: customRepeat })}
+              onClick={() => onSave({ title, date, startTime, duration, priority, description, tags: selectedTags, repeat, repeatConfig: customRepeat, repeatEndDate })}
               disabled={!title || !date}
               className="px-10 py-3 bg-slate-900 text-white font-black text-xs uppercase rounded-2xl hover:bg-blue-600 shadow-xl transition-all disabled:opacity-30 active:scale-95"
             >

@@ -63,11 +63,11 @@ const ListView: React.FC<ListViewProps> = ({ tasks, onToggleTask, onEditTask, av
                     </button>
 
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-3">
-                        <h4 className={`text-xl font-bold text-slate-800 truncate leading-none ${task.completed ? 'line-through text-slate-400' : ''}`}>
+                      <div className="flex items-start justify-between mb-3 flex-col sm:flex-row gap-2">
+                        <h4 className={`text-xl font-bold text-slate-800 break-words leading-tight ${task.completed ? 'line-through text-slate-400' : ''}`}>
                           {task.title}
                         </h4>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-shrink-0">
                           <span className="text-[12px] font-black text-slate-500 bg-slate-100 px-3 py-1.5 rounded-xl uppercase tracking-tight">
                             {task.startTime}
                           </span>
@@ -76,7 +76,7 @@ const ListView: React.FC<ListViewProps> = ({ tasks, onToggleTask, onEditTask, av
                       
                       {task.description ? (
                         <div className="relative mb-4">
-                          <p className={`text-xl text-slate-600 note-font leading-relaxed ${task.completed ? 'text-slate-400' : ''}`}>
+                          <p className={`text-xl text-slate-600 note-font leading-relaxed whitespace-pre-wrap break-words ${task.completed ? 'text-slate-400' : ''}`}>
                             {task.description}
                           </p>
                           <div className="absolute -bottom-1 left-0 right-0 h-px bg-blue-100/50" />

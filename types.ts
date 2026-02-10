@@ -26,6 +26,7 @@ export interface Task {
   tags: string[]; // references TagDef.name
   repeat: RepeatType;
   repeatConfig?: RepeatConfig;
+  repeatEndDate?: string; // Limite de data da repetição
   parentId?: string; // To link recurring instances
 }
 
