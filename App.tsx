@@ -135,32 +135,44 @@ const App: React.FC = () => {
     const unit = baseTask.repeatConfig?.unit || 'day';
     const daysOfWeek = baseTask.repeatConfig?.daysOfWeek || [];
 
-    // Lógica especial ultra-precisa para Semanas Personalizadas com múltiplos dias
+    // Lógica robusta para Semanas Personalizadas (ex: Ter/Qua/Sex)
     if (baseTask.repeat === 'custom' && unit === 'week' && daysOfWeek.length > 0) {
-      let iterDate = new Date(startDate);
-      iterDate.setDate(iterDate.getDate() + 1); // Pula o dia base que já foi gerado
+      let current = new Date(startDate);
+      current.setDate(current.getDate() + 1); // Começamos a projetar do dia seguinte
       let count = 1;
       
-      while (iterDate <= endDate && count <= 365) { // Proteção extrema de limite de 365 cópias
-        const firstDayStart = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate() - startDate.getDay());
-        const iterDayStart = new Date(iterDate.getFullYear(), iterDate.getMonth(), iterDate.getDate() - iterDate.getDay());
-        const weeksDiff = Math.floor((iterDayStart.getTime() - firstDayStart.getTime()) / (7 * 24 * 60 * 60 * 1000));
+      // Encontra o domingo da semana de início para servir como âncora universal
+      const startMidnight = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+      const startSunday = new Date(startMidnight);
+      startSunday.setDate(startMidnight.getDate() - startMidnight.getDay());
 
-        if (weeksDiff % interval === 0 && daysOfWeek.includes(iterDate.getDay())) {
+      while (current <= endDate && count <= 365) {
+        const currentMidnight = new Date(current.getFullYear(), current.getMonth(), current.getDate());
+        const currentSunday = new Date(currentMidnight);
+        currentSunday.setDate(currentMidnight.getDate() - currentMidnight.getDay());
+
+        // Diferença EXATA de semanas
+        const diffWeeks = Math.round((currentSunday.getTime() - startSunday.getTime()) / (7 * 24 * 60 * 60 * 1000));
+
+        // Se estivermos em uma semana "ativa" e o dia da semana atual estiver marcado
+        if (diffWeeks % interval === 0 && daysOfWeek.includes(current.getDay())) {
+          const taskDate = new Date(current);
+          taskDate.setHours(startDate.getHours(), startDate.getMinutes(), startDate.getSeconds());
+
           recurring.push({
             ...baseTask,
             id: `${baseTask.id}-rec-${count}`,
-            date: iterDate.toISOString(),
+            date: taskDate.toISOString(),
             parentId: baseTask.id
           });
           count++;
         }
-        iterDate.setDate(iterDate.getDate() + 1);
+        current.setDate(current.getDate() + 1);
       }
       return recurring;
     }
 
-    // Lógica de pulo rápido para repetições padrão (Todo dia, Toda semana...)
+    // Repetições diárias, mensais e etc
     let current = new Date(startDate);
     let count = 1;
     
@@ -170,16 +182,19 @@ const App: React.FC = () => {
       else if (baseTask.repeat === 'monthly') current.setMonth(current.getMonth() + 1);
       else if (baseTask.repeat === 'custom') {
         if (unit === 'day') current.setDate(current.getDate() + interval);
-        else if (unit === 'week') current.setDate(current.getDate() + (interval * 7)); // Semanas inteiras
+        else if (unit === 'week') current.setDate(current.getDate() + (interval * 7)); 
         else if (unit === 'month') current.setMonth(current.getMonth() + interval);
       } else break;
 
       if (current > endDate || count > 365) break;
 
+      const taskDate = new Date(current);
+      taskDate.setHours(startDate.getHours(), startDate.getMinutes(), startDate.getSeconds());
+
       recurring.push({
         ...baseTask,
         id: `${baseTask.id}-rec-${count}`,
-        date: current.toISOString(),
+        date: taskDate.toISOString(),
         parentId: baseTask.id
       });
       count++;
